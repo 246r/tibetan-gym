@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チベット式健康体操</title>
+<style>
+  :root {
+    --bg-color: #f9f6f0;
+    --text-color: #3e3a35;
+    --accent-color: #e8dcc4;
+    --accent-hover: #d4cec4;
+  }
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  .app-container {
+    width: 100%;
+    max-width: 400px;
+    /* 手書き風の歪みを持たせた枠線 */
+    border: 2px solid var(--text-color);
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    padding: 30px 20px;
+    background-color: #ffffff;
+    text-align: center;
+    box-shadow: 4px 4px 0px #d4cec4;
+  }
+  h1 {
+    font-size: 1.4rem;
+    border-bottom: 2px dashed var(--text-color);
+    padding-bottom: 10px;
+    margin-top: 0;
+  }
+  .step-display {
+    font-size: 1.2rem;
+    margin: 20px 0;
+    font-weight: bold;
+    min-height: 1.5em;
+  }
+  .timer-display {
+    font-size: 3.5rem;
+    margin: 20px 0;
+    letter-spacing: 2px;
+  }
+  .btn {
+    background-color: var(--accent-color);
+    border: 2px solid var(--text-color);
+    border-radius: 15px 225px 15px 255px / 255px 15px 225px 15px;
+    padding: 12px 30px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: background-color 0.2s;
+    font-weight: bold;
+  }
+  .btn:hover {
+    background-color: var(--accent-hover);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .record-section {
+    margin-top: 40px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .record-section h2 {
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--text-color);
+    padding-bottom: 5px;
+  }
+  .record-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+  .record-item {
+    padding: 8px 0;
+    border-bottom: 1px dashed #ccc;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <h1>チベット式健康体操</h1>
+  <div class="step-display" id="stepName">準備はいいですか？</div>
+  <div class="timer-display" id="timeRemaining">04:00</div>
+  <button class="btn" id="startBtn">スタート</button>
+</div>
+
+<div class="record-section">
+  <h2>実施記録</h2>
+  <ul class="record-list" id="recordList">
+    <!-- 記録がここに追加されます -->
+  </ul>
+</div>
+
+<script>
+  // 体操のステップと各時間（秒）
+  const steps = [
+    { name: "ボディ・ウェーブ", duration: 60 },
+    { name: "アーム・スイング", duration: 60 },
+    { name: "トランク・ツイスト", duration: 60 },
+    { name: "デッド・アーム", duration: 60 }
+  ];
+
+  let currentStepIndex = 0;
+  let currentTimer = null;
+  let timeLeft = 0;
+
+  const stepNameEl = document.getElementById('stepName');
+  const timeRemainingEl = document.getElementById('timeRemaining');
+  const startBtn = document.getElementById('startBtn');
+  const recordListEl = document.getElementById('recordList');
+
+  // 初期ロード時に記録を表示
+  loadRecords();
+
+  startBtn.addEventListener('click', () => {
+    startBtn.disabled = true;
+    currentStepIndex = 0;
+    startNextStep();
+  });
+
+  function startNextStep() {
+    if (currentStepIndex < steps.length) {
+      const step = steps[currentStepIndex];
+      stepNameEl.textContent = `${currentStepIndex + 1}/4: ${step.name}`;
+      timeLeft = step.duration;
+      updateTimerDisplay();
+
+      currentTimer = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+
+        if (timeLeft <= 0) {
+          clearInterval(currentTimer);
+          currentStepIndex++;
+          // 少し間を置いて次のステップへ
+          setTimeout(startNextStep, 1000);
+        }
+      }, 1000);
+    } else {
+      // 全ステップ完了
+      stepNameEl.textContent = "お疲れ様でした！";
+      timeRemainingEl.textContent = "00:00";
+      startBtn.disabled = false;
+      saveRecord();
+    }
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const s = (timeLeft % 60).toString().padStart(2, '0');
+    timeRemainingEl.textContent = `${m}:${s}`;
+  }
+
+  function saveRecord() {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`;
+    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    
+    // ローカルストレージから既存の記録を取得
+    let records = JSON.parse(localStorage.getItem('tibetanGymRecords') || '[]');
+    records.unshift({ date: dateStr, time: timeStr });
+    
+    // 直近10件に制限
+    if(records.length > 10) records = records.slice(0, 10);
+    
+    localStorage.setItem('tibetanGymRecords', JSON.stringify(records));
+    loadRecords();
+  }
+
+  function loadRecords() {
+    const records = JSON.parse(localStorage.getItem('tibetanGymRecords') || '[]');
+    recordListEl.innerHTML = '';
+    
+    if (records.length === 0) {
+      recordListEl.innerHTML = '<li class="record-item">まだ記録がありません</li>';
+      return;
+    }
+
+    records.forEach(record => {
+      const li = document.createElement('li');
+      li.className = 'record-item';
+      li.innerHTML = `<span>${record.date}</span> <span>${record.time} 完了</span>`;
+      recordListEl.appendChild(li);
+    });
+  }
+</script>
+
+</body>
+</html>
